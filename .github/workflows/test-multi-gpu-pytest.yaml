@@ -29,11 +29,11 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  CI_IMAGE_TAG: isaac-lab-ci:${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.ref_name }}-${{ github.sha }}
+  CI_IMAGE_TAG: isaac-lab-ci:verify-torch214-${{ github.sha }}
   # Same tag family as kitless-docker.yml so the layer cache is shared, but built here: the ECR
   # cache repo is resolved per runner pool, so an image built on the `gpu` pool is invisible to
   # this one.
-  CI_KITLESS_IMAGE_TAG: isaac-lab-ci:${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.ref_name }}-${{ github.sha }}-kitless
+  CI_KITLESS_IMAGE_TAG: isaac-lab-ci:verify-torch214-${{ github.sha }}-kitless
 
 jobs:
   changes:
