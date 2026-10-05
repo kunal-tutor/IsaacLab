@@ -97,7 +97,7 @@ def _make_ovrtx_renderer_without_backend() -> OVRTXRenderer:
 
 @pytest.fixture(autouse=True)
 def _simulation_registry(monkeypatch):
-    sim = types.SimpleNamespace(_backend_registry=[])
+    sim = types.SimpleNamespace(_backend_registry=[], device="cpu")
     sim.get_scene_data_provider = lambda: types.SimpleNamespace(
         backend=types.SimpleNamespace(transform_paths=[]), get_geometry_points=lambda: {}
     )
@@ -268,6 +268,7 @@ def test_ovrtx_multiple_cameras_render_independent_views(monkeypatch, use_ovstag
 
     if not torch.cuda.is_available():
         pytest.skip("OVRTX rendering requires CUDA")
+    SimulationContext.instance().device = "cuda:0"
     monkeypatch.setenv("ISAAC_LAB_OVRTX_USE_OVSTAGE", str(int(use_ovstage)))
     stage = Usd.Stage.CreateInMemory()
     UsdGeom.SetStageUpAxis(stage, UsdGeom.Tokens.z)
