@@ -14,6 +14,7 @@ from pathlib import Path
 
 import pytest
 import tomllib
+from packaging.markers import Marker
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
@@ -110,6 +111,40 @@ def installed_wheel(
     directory = tmp_path_factory.mktemp(f"wheel-{request.param}")
     python = directory / "venv" / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
     run("uv", "venv", "--python", "3.12", str(directory / "venv"), cwd=directory)
+    # Install the selected CUDA stack first so wheel resolution cannot introduce
+    # a different NCCL provider or leave torchaudio on another CUDA version.
+    with (checkout / "pyproject.toml").open("rb") as file:
+        root = tomllib.load(file)
+    versions = root["tool"]["isaaclab"]["versions"]
+    uv_config = root["tool"]["uv"]
+    torch_sources = uv_config["sources"]["torch"]
+    if isinstance(torch_sources, dict):
+        torch_sources = [torch_sources]
+    torch_source = next(
+        source for source in torch_sources if "marker" not in source or Marker(source["marker"]).evaluate()
+    )
+    torch_index = next(index["url"] for index in uv_config["index"] if index.get("name") == torch_source["index"])
+    exclusions = []
+    if excluded := uv_config.get("exclude-dependencies", []):
+        exclude_file = directory / "uv-excludes.txt"
+        exclude_file.write_text("\n".join(excluded) + "\n", encoding="utf-8")
+        exclusions = ["--excludes", str(exclude_file)]
+    run(
+        "uv",
+        "--no-config",
+        "pip",
+        "install",
+        "--python",
+        str(python),
+        *(f"{name}=={versions[name]}" for name in ("torch", "torchvision", "torchaudio")),
+        "--overrides",
+        str(checkout / "tools/wheel_builder/uv-overrides.txt"),
+        *exclusions,
+        "--index-url",
+        torch_index,
+        cwd=directory,
+        timeout=4500,
+    )
     requirement = str(wheel) + ("[isaacsim]" if request.param == "isaacsim" else "")
     run(
         "uv",
@@ -121,31 +156,11 @@ def installed_wheel(
         requirement,
         "--overrides",
         str(checkout / "tools/wheel_builder/uv-overrides.txt"),
+        *exclusions,
         "--extra-index-url",
         "https://pypi.nvidia.com",
         "--index-strategy",
         "unsafe-best-match",
-        cwd=directory,
-        timeout=4500,
-    )
-    # Wheel consumers select their CUDA index explicitly; project sources do not propagate.
-    with (checkout / "pyproject.toml").open("rb") as file:
-        versions = tomllib.load(file)["tool"]["isaaclab"]["versions"]
-    run(
-        "uv",
-        "--no-config",
-        "pip",
-        "install",
-        "--python",
-        str(python),
-        f"torch=={versions['torch']}",
-        f"torchvision=={versions['torchvision']}",
-        "--reinstall-package",
-        "torch",
-        "--reinstall-package",
-        "torchvision",
-        "--index-url",
-        "https://download.pytorch.org/whl/cu130",
         cwd=directory,
         timeout=4500,
     )

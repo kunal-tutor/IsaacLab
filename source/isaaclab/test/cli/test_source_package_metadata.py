@@ -18,14 +18,16 @@ pytestmark = pytest.mark.unit
 
 @pytest.mark.parametrize("name", ["torch", "torchvision", "torchaudio"])
 def test_resolved_torch_stack_supports_blackwell(source_checkout_root: Path, name: str):
-    """All supported platforms use CUDA 13 wheels for Blackwell and DGX Spark."""
+    """Blackwell requires CUDA 12.8 or newer wheels from their matching CUDA index."""
     with (source_checkout_root / "uv.lock").open("rb") as f:
         lock = tomllib.load(f)
 
     packages = [package for package in lock["package"] if package["name"] == name]
     assert packages
-    assert all(package["version"].endswith("+cu130") for package in packages)
-    assert all(package["source"]["registry"] == "https://download.pytorch.org/whl/cu130" for package in packages)
+    for package in packages:
+        cuda = package["version"].partition("+cu")[2]
+        assert cuda.isdigit() and int(cuda) >= 128
+        assert package["source"]["registry"] == f"https://download.pytorch.org/whl/cu{cuda}"
 
 
 def _requirement_name(requirement: str) -> str:
