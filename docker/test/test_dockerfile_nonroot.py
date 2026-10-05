@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 import tomllib
+from packaging.markers import Marker
 
 from docker.utils import volume_mounts
 
@@ -55,7 +56,17 @@ def test_curobo_compiler_matches_torch_without_replacing_runtime_libraries():
     """CUDA extensions use Torch's CUDA version while uv owns its runtime libraries."""
     text = (DOCKER_DIR / "Dockerfile.curobo").read_text(encoding="utf-8")
     with (REPO_ROOT / "uv.lock").open("rb") as file:
-        torch_versions = {package["version"] for package in tomllib.load(file)["package"] if package["name"] == "torch"}
+        # This Dockerfile installs the x86_64 compiler; other platforms may select another CUDA build.
+        environment = {"sys_platform": "linux", "platform_machine": "x86_64"}
+        torch_versions = {
+            package["version"]
+            for package in tomllib.load(file)["package"]
+            if package["name"] == "torch"
+            and (
+                "resolution-markers" not in package
+                or any(Marker(marker).evaluate(environment) for marker in package["resolution-markers"])
+            )
+        }
 
     toolkit = re.search(r"\bcuda-toolkit-(\d+)-(\d+)\b", text)
     assert toolkit is not None
