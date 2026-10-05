@@ -281,8 +281,7 @@ class OVRTXBackend:
         if dependency.exists():
             with contextlib.suppress(OSError):
                 ctypes.CDLL(str(dependency))
-        # Pin the engine to the simulation's CUDA device, as Kit's ``activeCudaGpus`` does for RTX;
-        # unpinned, each rank of a multi-GPU run also allocates on every other visible GPU.
+        # Select the simulation's CUDA device for rendering, matching Kit's ``activeCudaGpus`` setting.
         sim_device = wp.get_device(SimulationContext.instance().device)
         native_cfg = RendererConfig(
             active_cuda_gpus=str(sim_device.ordinal) if sim_device.is_cuda else None,
