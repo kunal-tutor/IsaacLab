@@ -190,10 +190,10 @@ class IsaacLabUvImportersWheelInstall(SphinxDirective):
 
 
 class IsaacLabTorchInstall(SphinxDirective):
-    """Render the pinned ``torch``/``torchvision`` install command for a CUDA build.
+    """Render the pinned PyTorch stack install command for a CUDA build.
 
     Versions come from ``[tool.isaaclab.versions]`` (the single source of truth),
-    exposed via the ``torch_version`` / ``torchvision_version`` config values.
+    exposed via the Torch, torchvision, and torchaudio config values.
 
     Usage::
 
@@ -206,10 +206,11 @@ class IsaacLabTorchInstall(SphinxDirective):
         cuda_tag = self.arguments[0]
         torch_version = self.config.torch_version
         torchvision_version = self.config.torchvision_version
+        torchaudio_version = self.config.torchaudio_version
         content = f"""\
 .. code-block:: bash
 
-   uv pip install -U torch=={torch_version} torchvision=={torchvision_version} --index-url https://download.pytorch.org/whl/{cuda_tag}
+   uv pip install -U torch=={torch_version} torchvision=={torchvision_version} torchaudio=={torchaudio_version} --index-url https://download.pytorch.org/whl/{cuda_tag}
 """
         return _parse_rst(self, content)
 
@@ -281,6 +282,7 @@ def setup(app):
     app.add_config_value("isaacsim_version", "", "env")
     app.add_config_value("torch_version", "", "env")
     app.add_config_value("torchvision_version", "", "env")
+    app.add_config_value("torchaudio_version", "", "env")
     app.add_config_value("ovrtx_spec", "", "env")
     app.add_role("isaaclab-source", IsaacLabSourceLink())
     app.add_directive("isaaclab-clone-commands", IsaacLabCloneCommands)
