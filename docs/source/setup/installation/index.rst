@@ -265,6 +265,14 @@ Use NVIDIA's package index for the |isaaclab_wheel_version| prerelease. Do not u
 Choose how you want uv to manage the dependency. Both workflows start with the base
 ``isaaclab`` package; add optional capabilities only when your project needs them.
 
+.. note::
+
+   Select the PyTorch CUDA build before installing Isaac Lab, as in the standalone commands
+   below. For an external uv project, also use the matching checkout's PyTorch dependency
+   versions, ``[tool.uv.sources]`` entries, and named PyTorch indexes before resolving Isaac Lab.
+   The wheel metadata does not select the CUDA index. Use a fresh environment when changing
+   CUDA families; an in-place switch can leave overlapping NCCL providers installed.
+
 .. tab-set::
 
    .. tab-item:: uv project dependency
@@ -287,6 +295,11 @@ Choose how you want uv to manage the dependency. Both workflows start with the b
 
                uv venv --python 3.12 env_isaaclab
                source env_isaaclab/bin/activate
+
+            .. isaaclab-torch-install:: cu128
+
+            .. code-block:: bash
+
                uv pip install --index https://pypi.nvidia.com isaaclab==3.0.0rc1
 
          .. tab-item:: :icon:`fa-brands fa-windows` Windows (x86_64)
@@ -296,6 +309,11 @@ Choose how you want uv to manage the dependency. Both workflows start with the b
 
                uv venv --python 3.12 env_isaaclab
                env_isaaclab\Scripts\activate
+
+            .. isaaclab-torch-install:: cu128
+
+            .. code-block:: batch
+
                uv pip install --index https://pypi.nvidia.com isaaclab==3.0.0rc1
 
          .. tab-item:: :icon:`fa-brands fa-linux` Linux (aarch64)
@@ -305,6 +323,11 @@ Choose how you want uv to manage the dependency. Both workflows start with the b
 
                uv venv --python 3.12 env_isaaclab
                source env_isaaclab/bin/activate
+
+            .. isaaclab-torch-install:: cu130
+
+            .. code-block:: bash
+
                uv pip install --index https://pypi.nvidia.com isaaclab==3.0.0rc1
 
 The project workflow records the dependency in ``pyproject.toml`` and updates ``uv.lock``. Use it
