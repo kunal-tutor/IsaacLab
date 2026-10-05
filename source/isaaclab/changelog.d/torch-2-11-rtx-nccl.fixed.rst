@@ -1,2 +1,3 @@
-* Pinned PyTorch to 2.11 and torchvision to 0.26 with CUDA 13.0 and matching NCCL dependencies
-  to avoid collective initialization failures after RTX rendering starts on affected drivers.
+* Pinned PyTorch to 2.11 and torchvision to 0.26 with CUDA 12.8 on Linux x86 and Windows,
+  retaining CUDA 13.0 on Linux ARM, to avoid RTX collective initialization failures while
+  preserving compatibility with existing CUDA 12 graphics drivers.

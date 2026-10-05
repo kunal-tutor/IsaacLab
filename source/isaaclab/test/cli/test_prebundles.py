@@ -136,8 +136,14 @@ class TestRePointPrebundlePackages:
         assert (prebundle / "nvidia").is_dir(), "Original nvidia directory must be preserved"
 
     def test_local_build_repoints_nvidia_when_cudnn_present_venv(self, tmp_path):
-        """Repoint the nvidia namespace when the environment provides CUDA libraries."""
+        """CUDA replacement preserves Kit files shared with other NVIDIA namespace packages."""
         isaacsim_path, prebundle = self._sim_with_prebundle(tmp_path / "sim", ["nvidia"])
+        kit_file = prebundle / "nvidia" / "omniverse" / "storage" / "fileobject_pb2.py"
+        kit_file.parent.mkdir(parents=True)
+        kit_file.write_text("Kit's shared Omniverse module")
+        shared = isaacsim_path / "extscache" / "package_explorer" / "fileobject_pb2.py"
+        shared.parent.mkdir(parents=True)
+        shared.symlink_to(kit_file)
         site_pkgs = _make_site_packages(
             tmp_path / "env",
             ["nvidia"],
@@ -148,9 +154,9 @@ class TestRePointPrebundlePackages:
         with self._patch(isaacsim_path, site_pkgs, py):
             repoint_prebundle_packages()
 
-        symlink = prebundle / "nvidia"
-        assert symlink.is_symlink(), "nvidia should be repointed when cudnn is present"
-        assert symlink.resolve() == (site_pkgs / "nvidia").resolve()
+        assert shared.read_text() == "Kit's shared Omniverse module"
+        for name in ("cudnn", "cublas"):
+            assert (prebundle / "nvidia" / name).resolve() == (site_pkgs / "nvidia" / name).resolve()
 
     def test_idempotent_when_symlink_already_correct(self, tmp_path):
         """Calling repoint_prebundle_packages twice does not break the symlinks."""

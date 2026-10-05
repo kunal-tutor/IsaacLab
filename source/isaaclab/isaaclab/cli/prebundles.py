@@ -131,30 +131,34 @@ def repoint_prebundle_packages() -> None:
 
             targets = [(prebundled, venv_pkg)]
             if pkg_name == "nvidia":
-                # CUDA 13 wheels share cudnn/NCCL directories with older layouts,
-                # but move the toolkit libraries into cu13/. Redirect Torch's
-                # runtime directories while preserving Kit's CUDA 12 files:
-                # Hydra links to cuda_nvrtc/lib/libnvrtc-builtins.so.12.8.
-                if (venv_pkg / "cu13").is_dir():
-                    if prebundled.is_symlink():
-                        target = prebundled.resolve()
-                        state = "current" if target == venv_pkg.resolve() else "stale or missing"
-                        raise RuntimeError(
-                            f"NVIDIA prebundle namespace link {prebundled} -> {target} has a {state} target. "
-                            "A whole-namespace link cannot preserve Kit's CUDA 12 libraries with CUDA 13. "
-                            "Restore a clean Isaac Sim installation (or rebuild the container image), then "
-                            "rerun the installer. Do not just delete the link: the bundled libraries must be restored."
-                        )
-                    targets = [
-                        (prebundled / name, venv_pkg / name)
-                        for name in ("cu13", "cudnn", "cusparselt", "nccl", "nvshmem")
-                        if (venv_pkg / name).is_dir()
-                    ]
-                elif not (venv_pkg / "cudnn").exists():
+                has_cuda13 = (venv_pkg / "cu13").is_dir()
+                if not has_cuda13 and not (venv_pkg / "cudnn").exists():
                     # Kit's interpreter may provide only nvidia-srl; replacing
                     # the namespace with it would remove the CUDA libraries.
                     print_debug(f"Skipping repoint of {prebundled}: {venv_pkg} lacks CUDA subpackages.")
                     continue
+                if prebundled.is_symlink():
+                    target = prebundled.resolve()
+                    state = "current" if target == venv_pkg.resolve() else "stale or missing"
+                    raise RuntimeError(
+                        f"NVIDIA prebundle namespace link {prebundled} -> {target} has a {state} target. "
+                        "A whole-namespace link cannot preserve Kit's NVIDIA libraries and modules. "
+                        "Restore a clean Isaac Sim installation (or rebuild the container image), then "
+                        "rerun the installer. Do not just delete the link: the bundled files must be restored."
+                    )
+                # CUDA 13 wheels share cudnn/NCCL directories with older layouts,
+                # but move the toolkit libraries into cu13/. Redirect Torch's
+                # runtime directories while preserving Kit's CUDA 12 files:
+                # Hydra links to cuda_nvrtc/lib/libnvrtc-builtins.so.12.8.
+                if has_cuda13:
+                    names = ("cu13", "cudnn", "cusparselt", "nccl", "nvshmem")
+                else:
+                    # CUDA 12 also replaces children rather than the namespace;
+                    # other Kit extensions share its nvidia.omniverse modules.
+                    names = tuple(
+                        path.name for path in venv_pkg.iterdir() if path.is_dir() and path.name != "__pycache__"
+                    )
+                targets = [(prebundled / name, venv_pkg / name) for name in names if (venv_pkg / name).is_dir()]
 
             for prebundled, venv_pkg in targets:
                 try:
