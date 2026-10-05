@@ -396,7 +396,7 @@ Add other extras inside the brackets when needed; for example, use
 Installing CUDA-enabled PyTorch
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Install the CUDA 13.0 PyTorch build using the commands for your platform:
+Install the CUDA 12.8 PyTorch build on Linux x86_64 and Windows, or CUDA 13.0 on Linux ARM:
 
 .. tab-set::
    :sync-group: pip-platform
@@ -404,12 +404,12 @@ Install the CUDA 13.0 PyTorch build using the commands for your platform:
    .. tab-item:: :icon:`fa-brands fa-linux` Linux (x86_64)
       :sync: linux-x86_64
 
-      .. isaaclab-torch-install:: cu130
+      .. isaaclab-torch-install:: cu128
 
    .. tab-item:: :icon:`fa-brands fa-windows` Windows (x86_64)
       :sync: windows-x86_64
 
-      .. isaaclab-torch-install:: cu130
+      .. isaaclab-torch-install:: cu128
 
    .. tab-item:: :icon:`fa-brands fa-linux` Linux (aarch64)
       :sync: linux-aarch64

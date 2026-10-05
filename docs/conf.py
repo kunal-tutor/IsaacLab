@@ -82,6 +82,7 @@ _pinned_versions = _read_pinned_versions()
 isaacsim_version = _pinned_versions["isaacsim"]
 torch_version = _pinned_versions["torch"]
 torchvision_version = _pinned_versions["torchvision"]
+torchaudio_version = _pinned_versions["torchaudio"]
 ovrtx_version = _pinned_versions["ovrtx"]
 ovrtx_spec = f"=={ovrtx_version}" if ovrtx_version[0].isdigit() else ovrtx_version
 ovphysx_version = _pinned_versions["ovphysx"]
