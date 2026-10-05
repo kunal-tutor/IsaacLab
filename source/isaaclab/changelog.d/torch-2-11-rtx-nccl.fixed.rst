@@ -1,2 +1,2 @@
-* Pinned PyTorch to 2.11 and torchvision to 0.26 with CUDA 13.0 and matching NCCL dependencies
-  to avoid collective initialization failures after RTX rendering starts on affected drivers.
+* Kept PyTorch 2.12 with CUDA 13.0 while selecting the compatible NCCL 2.29.7 CUDA 12 build
+  through uv to avoid collective initialization failures after RTX rendering starts.
