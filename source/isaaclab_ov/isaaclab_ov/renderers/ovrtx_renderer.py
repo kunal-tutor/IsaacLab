@@ -256,6 +256,31 @@ def _write_file(output_dir: Path, file_name: str, content: str) -> None:
         logger.info("Wrote USD file: %s", output_path)
 
 
+def _env_camera_prim_paths(camera_path_relative_to_env_0: str | None, num_instances: int) -> list[str]:
+    """Return per-environment camera paths for an OVRTX camera.
+
+    OVRTX replicates the env-0 scene during bootstrap. The camera
+    ``CameraRenderSpec`` therefore contains the USD-authored env-0 prototype even though the
+    renderer must bind one camera per environment.
+
+    Args:
+        camera_path_relative_to_env_0: Camera path with the ``/World/envs/env_0/`` prefix removed.
+        num_instances: Number of environment instances.
+
+    Returns:
+        Absolute camera paths in environment order.
+
+    Raises:
+        ValueError: If the camera prototype is not under ``/World/envs/env_0/``.
+    """
+    if not camera_path_relative_to_env_0:
+        raise ValueError(
+            "OVRTX cameras require an env-0-relative path; "
+            f"actual={camera_path_relative_to_env_0!r}, num_instances={num_instances}"
+        )
+    return [f"/World/envs/env_{env_id}/{camera_path_relative_to_env_0}" for env_id in range(num_instances)]
+
+
 class OVRTXBackend:
     """Own one native renderer and its optional detached stage, without camera or transport policy."""
 
@@ -596,7 +621,7 @@ class OVRTXRenderer(BaseRenderer):
         render_data.resources.callback(self.backend.renderer.remove_usd, reference)
         logger.info("OVRTX loaded USD from string successfully")
 
-        camera_paths = [f"/World/envs/env_{i}/{self._camera_rel_path}" for i in range(num_envs)]
+        camera_paths = _env_camera_prim_paths(self._camera_rel_path, num_envs)
         if num_envs > 1:
             self._clone_sources_in_ovrtx()
             self._update_scene_partitions_after_clone(num_envs)
@@ -678,7 +703,7 @@ class OVRTXRenderer(BaseRenderer):
         logger.info("Writing scene partitions for %d environments...", num_envs)
         partition_tokens = [f"env_{i}" for i in range(num_envs)]
         env_prim_paths = [f"/World/envs/env_{i}" for i in range(num_envs)]
-        camera_prim_paths = [f"/World/envs/env_{i}/{self._camera_rel_path}" for i in range(num_envs)]
+        camera_prim_paths = _env_camera_prim_paths(self._camera_rel_path, num_envs)
 
         self.backend.renderer.write_attribute(
             env_prim_paths,
@@ -970,9 +995,7 @@ class OVRTXRenderer(BaseRenderer):
 
     def _register_camera(self, spec: CameraRenderSpec, render_data: OVRTXCameraRenderData) -> None:
         """Add another tiled product and camera binding without reloading the shared scene."""
-        camera_paths = list(spec.camera_prim_paths)
-        if not camera_paths or not camera_paths[0].startswith("/World/envs/env_0/"):
-            raise ValueError("OVRTX cameras must be under /World/envs/env_0/.")
+        camera_paths = _env_camera_prim_paths(spec.camera_path_relative_to_env_0, spec.num_instances)
         scope = f"RenderCamera_{self._next_camera_id}"
         data_types = list(spec.cfg.data_types or ["rgb"])
         if spec.cfg.isp_cfg is not None and "rgb_hdr" not in data_types:
@@ -1953,7 +1976,7 @@ class OVRTXRenderer(BaseRenderer):
 
         self._initialized_scene = True
 
-        camera_paths = [f"/World/envs/env_{i}/{self._camera_rel_path}" for i in range(num_envs)]
+        camera_paths = _env_camera_prim_paths(self._camera_rel_path, num_envs)
 
         # Re-author the RenderProduct's camera relationship after clone. ``stage.clone`` recreates the per-env
         # cameras, so the RenderProduct must be pointed at the freshly-interned camera path ids to discover every
@@ -2054,7 +2077,7 @@ class OVRTXRenderer(BaseRenderer):
         """Update scene partition attributes on cloned environments and cameras (ovstage path)."""
         logger.info("Writing scene partitions for %d environments...", num_envs)
         env_prim_paths = [f"/World/envs/env_{i}" for i in range(num_envs)]
-        camera_prim_paths = [f"/World/envs/env_{i}/{self._camera_rel_path}" for i in range(num_envs)]
+        camera_prim_paths = _env_camera_prim_paths(self._camera_rel_path, num_envs)
         # TOKEN_ID semantic tells ovstage the uint64 values are interned string tokens, not raw integers;
         # the renderer resolves them back to the original "env_N" strings for scene-partition lookup.
         token_ids = np.array([self.backend.paths.intern_token(f"env_{i}") for i in range(num_envs)], dtype=np.uint64)
